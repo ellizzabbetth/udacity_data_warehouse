@@ -1,29 +1,32 @@
 
-import psycopg2
-import matplotlib.pyplot as plt
 import pandas as pd
-import os
-import glob
 import logging
-
-from sql_queries import create_connection,  test_queries, validation_queries
+from sql_queries import create_connection, test_queries, validation_queries
 
 def get_tables_rows(cur, conn):
     """
-    Gets the number of rows stored into each table
+    Return the number of rows stored into each table
     """
     for query in validation_queries:
-        logging.info('cluster created {}'.format(query))
+        logging.info('Validate data {}'.format(query))
         print('\n'.join(('', 'Running:', query)))
         cur.execute(query)
         results = cur.fetchone()
         for row in results:
             print(row)
 
-def make_queries(cur, conn):
-    print("=== Runs tests...")
+        # logging.info('Sample of data in final tables. {}'.format(query))
+        # try:
+        #     cur.execute(query)
+        #     rows = cur.fetchall()
+        #     print(pd.DataFrame(rows, columns=cols))
+
+        # except Exception as e:
+        #     print(e)
+def execute_test_queries(cur, conn):
     for query in test_queries:
         try:
+            logging.info('Query data in final tables. {}'.format(query))
             print(query)
             cur.execute(query)
             rows = cur.fetchall()
@@ -35,7 +38,7 @@ def make_queries(cur, conn):
 
 
 def check_tables(cur):
-    """ Print a subsample of the data in each of the final tablesk.
+    """ Print a sample of the data in each of the final tables.
 
         Args:
         * cur: the cursor to the db connection
@@ -73,11 +76,9 @@ def check_tables(cur):
              LIMIT {};
         """.format(table, 10)
 
-        print(f"\n===== {table} ===== ")
-
+        logging.info('Sample of data in final tables. {}'.format(query))
         try:
             cur.execute(query)
-
             rows = cur.fetchall()
             print(pd.DataFrame(rows, columns=cols))
 
@@ -91,18 +92,13 @@ def main():
     cur, conn = create_connection()
     print('Connected to Redshift Cluster...')
 
-
-    # print a sample of data for sanitation
+    # View a sample of data for sanitation
     check_tables(cur)
-    
     # Analytical queries
     get_tables_rows(cur, conn)
-
-    make_queries(cur, conn)
-
-   
+    execute_test_queries(cur, conn)
+  
     logging.info('Exiting...')
-    
     conn.close()
 
 

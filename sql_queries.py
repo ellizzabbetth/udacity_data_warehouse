@@ -61,12 +61,12 @@ staging_songs_copy = ("""
 # DROP TABLES
 
 staging_events_table_drop = "DROP TABLE IF EXISTS staging_events;"
-staging_songs_table_drop = "DROP TABLE IF EXISTS staging_songs;"
-songplay_table_drop = "DROP TABLE IF EXISTS songplay;"
-user_table_drop = "DROP TABLE IF EXISTS users;"
-song_table_drop = "DROP TABLE IF EXISTS songs;"
-artist_table_drop = "DROP TABLE IF EXISTS artists;"
-time_table_drop = "DROP TABLE  IF EXISTS time;"
+staging_songs_table_drop =  "DROP TABLE IF EXISTS staging_songs;"
+songplay_table_drop =       "DROP TABLE IF EXISTS songplay;"
+user_table_drop =           "DROP TABLE IF EXISTS users;"
+song_table_drop =           "DROP TABLE IF EXISTS songs;"
+artist_table_drop =         "DROP TABLE IF EXISTS artists;"
+time_table_drop =           "DROP TABLE  IF EXISTS time;"
 
 
 
@@ -114,7 +114,7 @@ staging_songs_table_create = ("""
 
 songplay_table_create = ("""
     CREATE TABLE songplay (
-        songplay_id     BIGINT IDENTITY(0, 1) PRIMARY KEY, 
+        songplay_id     BIGINT IDENTITY(0, 1) NOT NULL PRIMARY KEY, 
         start_time      BIGINT, 
         user_id         TEXT DISTKEY, 
         level           TEXT,
@@ -126,23 +126,10 @@ songplay_table_create = ("""
     );
 """)
 
-# songplay_table_create = ("""
-#     CREATE TABLE songplay (
-#         songplay_id     BIGINT IDENTITY(0, 1) PRIMARY KEY, 
-#         start_time      BIGINT NOT NULL, 
-#         user_id         TEXT NOT NULL DISTKEY, 
-#         level           TEXT,
-#         song_id         TEXT  NOT NULL, 
-#         artist_id       TEXT  NOT NULL, 
-#         session_id      INTEGER, 
-#         location        TEXT sortkey, 
-#         user_agent      TEXT
-#     );
-# """)
 
 user_table_create = ("""
     CREATE TABLE users (
-        user_id         TEXT PRIMARY KEY DISTKEY, 
+        user_id         TEXT NOT NULL PRIMARY KEY DISTKEY, 
         first_name      TEXT, 
         last_name       TEXT,
         gender          TEXT,
@@ -153,7 +140,7 @@ user_table_create = ("""
 
 song_table_create = ("""
     CREATE TABLE songs (
-        song_id         TEXT PRIMARY KEY  DISTKEY, 
+        song_id         TEXT NOT NULL PRIMARY KEY  DISTKEY, 
         title           TEXT, 
         artist_id       TEXT, 
         year            INTEGER,
@@ -164,7 +151,7 @@ song_table_create = ("""
 
 artist_table_create = ("""
     CREATE TABLE artists (
-        artist_id       TEXT PRIMARY KEY, 
+        artist_id       TEXT NOT NULL PRIMARY KEY, 
         name            TEXT, 
         location        TEXT, 
         latitude        FLOAT, 
@@ -191,8 +178,6 @@ time_table_create = ("""
 # FINAL TABLES
 #  JOIN condition should be on song title, artist name and song duration.
 
-
-
 songplay_table_insert = ("""
    INSERT INTO songplay (start_time, user_id, level, song_id, 
             artist_id, session_id, location, user_agent)
@@ -210,31 +195,13 @@ songplay_table_insert = ("""
     AND
         e.artist = s.artist_name 
     AND
-        ABS(e.length - s.duration) < 2
+        ABS(e.length - s.duration) < 12
     WHERE
         e.page = 'NextSong'
        
 """)
 
-#  AND e.artist = s.artist_name
-#             AND e.length = s.duration
-#        WHERE e.page = 'NextSong'
-#       AND s.song_id IS NOT NULL
-#       AND s.artist_id IS NOT NULL
 
-# songplay_table_create = ("""
-#     CREATE TABLE songplay (
-#         songplay_id     BIGINT IDENTITY(0, 1) PRIMARY KEY, 
-#         start_time      BIGINT NOT NULL, 
-#         user_id         TEXT NOT NULL DISTKEY, 
-#         level           TEXT,
-#         song_id         TEXT  NOT NULL, 
-#         artist_id       TEXT  NOT NULL, 
-#         session_id      INTEGER, 
-#         location        TEXT sortkey, 
-#         user_agent      TEXT
-#     );
-# """)
 user_table_insert = ("""
     INSERT INTO users
     WITH numbered_levels AS (
@@ -259,6 +226,7 @@ song_table_insert = ("""
            CAST(year AS INTEGER),
            duration
       FROM staging_songs
+      WHERE song_id IS NOT NULL
 """)
 
 artist_table_insert = ("""
@@ -269,17 +237,18 @@ artist_table_insert = ("""
            artist_latitude,
            artist_longitude
       FROM staging_songs
+      WHERE artist_id IS NOT NULL
 """)
 
 time_table_insert = ("""
     INSERT INTO time 
     SELECT DISTINCT ts AS start_time,
-           EXTRACT(hour FROM timestamp 'epoch' + ts/1000 * interval '1 second') AS hour,
-           EXTRACT(day FROM timestamp 'epoch' + ts/1000 * interval '1 second') AS day,
-           EXTRACT(week FROM timestamp 'epoch' + ts/1000 * interval '1 second') AS week,
-           EXTRACT(month FROM timestamp 'epoch' + ts/1000 * interval '1 second') AS monty,
-           EXTRACT(year FROM timestamp 'epoch' + ts/1000 * interval '1 second') AS year,
-           EXTRACT(weekday FROM timestamp 'epoch' + ts/1000 * interval '1 second') AS weekday
+           EXTRACT(hour     FROM timestamp 'epoch' + ts/1000 * interval '1 second') AS hour,
+           EXTRACT(day      FROM timestamp 'epoch' + ts/1000 * interval '1 second') AS day,
+           EXTRACT(week     FROM timestamp 'epoch' + ts/1000 * interval '1 second') AS week,
+           EXTRACT(month    FROM timestamp 'epoch' + ts/1000 * interval '1 second') AS monty,
+           EXTRACT(year     FROM timestamp 'epoch' + ts/1000 * interval '1 second') AS year,
+           EXTRACT(weekday  FROM timestamp 'epoch' + ts/1000 * interval '1 second') AS weekday
       FROM staging_events
      WHERE page = 'NextSong'
 """)
@@ -321,23 +290,23 @@ get_number_time =           "SELECT COUNT(*) FROM time"
 
 test1 = (
 """
-WITH top_users AS (
+WITH super_users AS (
     SELECT user_id, COUNT(*) AS cnt
     FROM songplay
     GROUP BY user_id
     ORDER BY cnt DESC
-    LIMIT 5
+    LIMIT 15
 )
 SELECT users.first_name, 
        users.last_name, 
-       top_users.cnt
-  FROM top_users
+       super_users.cnt
+  FROM super_users
  INNER JOIN users
        ON users.user_id = top_users.user_id
  ORDER BY cnt DESC
 """
 )
-# TEST QUERIES
+
 test2 = (
 """
 SELECT location, 
@@ -345,7 +314,7 @@ SELECT location,
   FROM songplay
  GROUP BY location 
  ORDER BY cnt DESC 
- LIMIT 5
+ LIMIT 50
 """
 )
 
@@ -367,8 +336,8 @@ test4 = (
 
     """
   SELECT CASE
-           WHEN t.hour BETWEEN 2 AND 8  THEN '2~8'
-           WHEN t.hour BETWEEN 9 AND 12 THEN '9~12'
+           WHEN t.hour BETWEEN 2 AND 7  THEN '2~7'
+           WHEN t.hour BETWEEN 8 AND 12 THEN '8~12'
            WHEN t.hour BETWEEN 13 AND 18 THEN '13~18'
            WHEN t.hour BETWEEN 19 AND 22 THEN '19~22'
            ELSE '23~24, 0~2'
@@ -382,6 +351,23 @@ ORDER BY 2 DESC;
     """
 )
 
+test5 = (
+    """
+SELECT  sp.songplay_id,
+        u.user_id,
+        u.last_name,
+        u.first_name,
+        sp.start_time,
+        sp.song_id
+      
+FROM songplay AS sp
+        JOIN users   AS u ON (u.user_id = sp.user_id)
+
+
+ORDER BY (u.last_name)
+LIMIT 100;
+    """
+)
 
 # QUERY LISTS
 create_table_queries =  [
@@ -431,5 +417,6 @@ test_queries = [
     test1,
     test2,
     test3,
-    test4
+    test4,
+    test5
 ]
