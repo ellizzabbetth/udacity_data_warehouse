@@ -5,7 +5,7 @@
 
 
 #### Setup & Configuration
-1. Setup your IAM user (with programmatic) Access Key and Secret Key with the following commands:
+1. Setup your IAM user with programmatic Access Key and Secret Key with the following commands:
 
 setx AWS_ACCESS_KEY_ID ********
 setx AWS_SECRET_ACCESS_KEY ******
@@ -13,7 +13,10 @@ setx AWS_DEFAULT_REGION us-west-2
 
  [How to set environment variables] (https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html)
 
+2. Create dwh.cfg file. Then populate with custom values using dwh_template as an example.
 
+3. Notice that we use song_data = 's3://udacity-dend/song-data/A/A/A'. This is because using song_data = 's3://udacity-dend/song-data' 
+took more than one hour to copy from S3 to Redshift.
  
 ## Summary
 
@@ -176,8 +179,13 @@ OR
 $ python create_cluster.py --delete
 ```
 
+Create plots
+```bash
+    Run cells in Jupyter notebook
+```
+
 ## Further work
 
-* Add additional data quality checks
-* Creation of a dashboard for analytic queries
+* Add additional data quality checks -- song table has too many records with song_id null
+* Creation of a dashboard for analytic queries using Power BI
 
