@@ -194,12 +194,14 @@ songplay_table_insert = ("""
     ON e.song = s.title
     AND
         e.artist = s.artist_name 
-    AND
-        ABS(e.length - s.duration) < 12
+   
     WHERE
-        e.page = 'NextSong'
-       
+      e.page = 'NextSong'
+
 """)
+
+#  AND
+        # ABS(e.length - s.duration) < 12
 
 
 user_table_insert = ("""
@@ -207,16 +209,33 @@ user_table_insert = ("""
     WITH numbered_levels AS (
       SELECT ROW_NUMBER() over (PARTITION by userId ORDER BY ts DESC) AS row_num,
              userId AS user_id,
-             firstName, 
-             lastName, 
+             firstName AS first_name, 
+             lastName AS last_name, 
              gender, 
              level
         FROM staging_events
     )
-    SELECT DISTINCT user_id, firstName, lastName, gender, level
+    SELECT DISTINCT user_id, first_name, last_name, gender, level
       FROM numbered_levels
      WHERE row_num = 1 and user_id is not null
+    
 """)
+
+# user_table_insert = ("""
+#      INSERT INTO users (user_id,
+#      first_name,
+#      last_name,
+#      gender,
+#      level)
+#     SELECT  DISTINCT(userId)    AS user_id,
+#             firstName           AS first_name,
+#             lastName            AS last_name,
+#             gender,
+#             level
+#     FROM staging_events
+#     WHERE user_id IS NOT NULL
+#     AND page  =  'NextSong';
+# """)
 
 song_table_insert = ("""
     INSERT INTO songs 
@@ -227,6 +246,7 @@ song_table_insert = ("""
            duration
       FROM staging_songs
       WHERE song_id IS NOT NULL
+                     
 """)
 
 artist_table_insert = ("""
@@ -238,6 +258,8 @@ artist_table_insert = ("""
            artist_longitude
       FROM staging_songs
       WHERE artist_id IS NOT NULL
+      ORDER BY artist_id;
+
 """)
 
 time_table_insert = ("""
@@ -246,7 +268,7 @@ time_table_insert = ("""
            EXTRACT(hour     FROM timestamp 'epoch' + ts/1000 * interval '1 second') AS hour,
            EXTRACT(day      FROM timestamp 'epoch' + ts/1000 * interval '1 second') AS day,
            EXTRACT(week     FROM timestamp 'epoch' + ts/1000 * interval '1 second') AS week,
-           EXTRACT(month    FROM timestamp 'epoch' + ts/1000 * interval '1 second') AS monty,
+           EXTRACT(month    FROM timestamp 'epoch' + ts/1000 * interval '1 second') AS month,
            EXTRACT(year     FROM timestamp 'epoch' + ts/1000 * interval '1 second') AS year,
            EXTRACT(weekday  FROM timestamp 'epoch' + ts/1000 * interval '1 second') AS weekday
       FROM staging_events
@@ -276,22 +298,22 @@ time_table_drop =           "DROP TABLE IF EXISTS time"
 
 
 # ANALYTICAL QUERIES
-get_number_staging_events = "SELECT COUNT(*) FROM staging_events"
-get_number_staging_songs =  "SELECT COUNT(*) FROM staging_songs"
-get_number_songplay =       "SELECT COUNT(*) FROM songplay"
-get_number_users =          "SELECT COUNT(*) FROM users"
-get_number_songs =          "SELECT COUNT(*) FROM songs"
-get_number_artists =        "SELECT COUNT(*) FROM artists"
-get_number_time =           "SELECT COUNT(*) FROM time"
+count_staging_events = "SELECT COUNT(*) FROM staging_events"
+count_staging_songs =  "SELECT COUNT(*) FROM staging_songs"
+count_songplay =       "SELECT COUNT(*) FROM songplay"
+count_users =          "SELECT COUNT(*) FROM users"
+count_songs =          "SELECT COUNT(*) FROM songs"
+count_artists =        "SELECT COUNT(*) FROM artists"
+count_time =           "SELECT COUNT(*) FROM time"
 
 
 
 # TEST QUERIES
-
+# Top 15 super users
 test1 = (
 """
 WITH super_users AS (
-    SELECT user_id, COUNT(*) AS cnt
+    SELECT  user_id, COUNT(*) AS cnt
     FROM songplay
     GROUP BY user_id
     ORDER BY cnt DESC
@@ -302,11 +324,12 @@ SELECT users.first_name,
        super_users.cnt
   FROM super_users
  INNER JOIN users
-       ON users.user_id = top_users.user_id
+       ON users.user_id = super_users.user_id
+       
  ORDER BY cnt DESC
 """
 )
-
+# 50 most popular locations where songs are played
 test2 = (
 """
 SELECT location, 
@@ -353,7 +376,7 @@ ORDER BY 2 DESC;
 
 test5 = (
     """
-SELECT  sp.songplay_id,
+SELECT distinct sp.songplay_id,
         u.user_id,
         u.last_name,
         u.first_name,
@@ -363,11 +386,91 @@ SELECT  sp.songplay_id,
 FROM songplay AS sp
         JOIN users   AS u ON (u.user_id = sp.user_id)
 
-
+where sp.song_id is not NULL
 ORDER BY (u.last_name)
-LIMIT 100;
+LIMIT 10;
     """
 )
+
+test6 = (
+    """
+    select
+    song_id
+    from songs
+    """
+)
+
+test7 = (
+    """
+    select distinct
+    *
+    from users order by last_name
+    """
+)
+
+# most played songs by year
+test8 = (
+"""
+WITH max_song AS (
+    SELECT  year, COUNT(*) AS cnt
+    FROM songs
+    GROUP BY year
+    ORDER BY cnt DESC
+    LIMIT 15
+)
+SELECT title, songs.year,
+       max_song.cnt 
+  FROM max_song inner join songs
+  on songs.year = max_song.year
+
+ ORDER BY cnt DESC, year asc
+ LIMIT 30
+"""
+)
+
+
+# """
+# WITH super_users AS (
+#     SELECT  user_id, COUNT(*) AS cnt
+#     FROM songplay
+#     GROUP BY user_id
+#     ORDER BY cnt DESC
+#     LIMIT 15
+# )
+# SELECT users.first_name, 
+#        users.last_name, 
+#        super_users.cnt
+#   FROM super_users
+#  INNER JOIN users
+#        ON users.user_id = super_users.user_id
+       
+#  ORDER BY cnt DESC
+# """
+
+test9 = (
+    """
+    select * from songs s
+    join artists a on s.artist_id = a.artist_id
+
+    """
+)
+# """
+# WITH super_users AS (
+#     SELECT  user_id, COUNT(*) AS cnt
+#     FROM songplay
+#     GROUP BY user_id
+#     ORDER BY cnt DESC
+#     LIMIT 15
+# )
+# SELECT users.first_name, 
+#        users.last_name, 
+#        super_users.cnt
+#   FROM super_users
+#  INNER JOIN users
+#        ON users.user_id = super_users.user_id
+       
+#  ORDER BY cnt DESC
+# """
 
 # QUERY LISTS
 create_table_queries =  [
@@ -404,13 +507,13 @@ insert_table_queries =  [
 ]
 
 validation_queries = [
-    get_number_staging_events,
-    get_number_staging_songs,
-    get_number_songplay,
-    get_number_users,
-    get_number_songs,
-    get_number_artists,
-    get_number_time,
+    count_staging_events,
+    count_staging_songs,
+    count_songplay,
+    count_users,
+    count_songs,
+    count_artists,
+    count_time,
 ]
 
 test_queries = [
@@ -418,5 +521,9 @@ test_queries = [
     test2,
     test3,
     test4,
-    test5
+    test5,
+    test6,
+    test7,
+    test8,
+    test9
 ]

@@ -3,7 +3,7 @@ import pandas as pd
 import logging
 from sql_queries import create_connection, test_queries, validation_queries
 
-def get_tables_rows(cur, conn):
+def table_counts(cur, conn):
     """
     Return the number of rows stored into each table
     """
@@ -15,14 +15,7 @@ def get_tables_rows(cur, conn):
         for row in results:
             print(row)
 
-        # logging.info('Sample of data in final tables. {}'.format(query))
-        # try:
-        #     cur.execute(query)
-        #     rows = cur.fetchall()
-        #     print(pd.DataFrame(rows, columns=cols))
 
-        # except Exception as e:
-        #     print(e)
 def execute_test_queries(cur, conn):
     for query in test_queries:
         try:
@@ -31,13 +24,15 @@ def execute_test_queries(cur, conn):
             cur.execute(query)
             rows = cur.fetchall()
             print(pd.DataFrame(rows))
+            # for row in rows:
+            #     print(row)
 
         except Exception as e:
             print(e)
 
 
 
-def check_tables(cur):
+def sample_data_from_tables(cur):
     """ Print a sample of the data in each of the final tables.
 
         Args:
@@ -46,13 +41,13 @@ def check_tables(cur):
     tables = (
                 ("staging_events", 
                     ("artist", "auth", "firstName", "gender" ,
-                     "itemInSession","lastName","length", "level", 
+                     "itemInSession", "lastName", "length", "level", 
                      "location", "method", "page", "registration",
-                     "sessionId" ,"song", "status" ,"ts","userAgent", "userId")
+                     "sessionId" ,"song", "status" ,"ts", "userAgent", "userId")
                 ),
                 ("staging_songs", 
                     ("num_songs", "artist_id", "artist_latitude", "artist_longitude", "artist_location", 
-                     "artist_name", "song_id",  "title", "duration", "year")
+                     "artist_name", "song_id", "title", "duration", "year")
                 ),
                 ("users", ("user_id", "first_name", "last_name", "gender", "level")
                 ),
@@ -63,8 +58,8 @@ def check_tables(cur):
                 ("time", ("start_time", "hour", "day", "week", "month", "year", "weekday")
                 ),
                 ("songplay",
-                    ("songplay_id","start_time","user_id", "level", "song_id",
-                    "artist_id", "session_id", "location", "user_agent" )
+                    ("songplay_id", "start_time", "user_id", "level", "song_id",
+                    "artist_id", "session_id", "location", "user_agent")
                 )
             )
         
@@ -74,12 +69,13 @@ def check_tables(cur):
               FROM {}
              ORDER BY random()
              LIMIT {};
-        """.format(table, 10)
+        """.format(table, 20)
 
         logging.info('Sample of data in final tables. {}'.format(query))
         try:
             cur.execute(query)
             rows = cur.fetchall()
+           # logging.info('Sample of data in {}: {}'.format(table, query))
             print(pd.DataFrame(rows, columns=cols))
 
         except Exception as e:
@@ -93,9 +89,9 @@ def main():
     print('Connected to Redshift Cluster...')
 
     # View a sample of data for sanitation
-    check_tables(cur)
+    sample_data_from_tables(cur)
     # Analytical queries
-    get_tables_rows(cur, conn)
+    table_counts(cur, conn)
     execute_test_queries(cur, conn)
   
     logging.info('Exiting...')
