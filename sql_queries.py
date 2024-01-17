@@ -60,6 +60,7 @@ staging_songs_copy = ("""
 
 # DROP TABLES
 
+logging.info('Dropping tables ... ')
 staging_events_table_drop = "DROP TABLE IF EXISTS staging_events;"
 staging_songs_table_drop =  "DROP TABLE IF EXISTS staging_songs;"
 songplay_table_drop =       "DROP TABLE IF EXISTS songplay;"
@@ -67,6 +68,8 @@ user_table_drop =           "DROP TABLE IF EXISTS users;"
 song_table_drop =           "DROP TABLE IF EXISTS songs;"
 artist_table_drop =         "DROP TABLE IF EXISTS artists;"
 time_table_drop =           "DROP TABLE  IF EXISTS time;"
+
+
 
 
 
@@ -200,42 +203,40 @@ songplay_table_insert = ("""
 
 """)
 
-#  AND
-        # ABS(e.length - s.duration) < 12
 
 
-user_table_insert = ("""
-    INSERT INTO users
-    WITH numbered_levels AS (
-      SELECT ROW_NUMBER() over (PARTITION by userId ORDER BY ts DESC) AS row_num,
-             userId AS user_id,
-             firstName AS first_name, 
-             lastName AS last_name, 
-             gender, 
-             level
-        FROM staging_events
-    )
-    SELECT DISTINCT user_id, first_name, last_name, gender, level
-      FROM numbered_levels
-     WHERE row_num = 1 and user_id is not null
-    
-""")
 
 # user_table_insert = ("""
-#      INSERT INTO users (user_id,
-#      first_name,
-#      last_name,
-#      gender,
-#      level)
-#     SELECT  DISTINCT(userId)    AS user_id,
-#             firstName           AS first_name,
-#             lastName            AS last_name,
-#             gender,
-#             level
-#     FROM staging_events
-#     WHERE user_id IS NOT NULL
-#     AND page  =  'NextSong';
+#     INSERT INTO users
+#     WITH numbered_levels AS (
+#       SELECT ROW_NUMBER() over (PARTITION by userId ORDER BY ts DESC) AS row_num,
+#              userId AS user_id,
+#              firstName AS first_name, 
+#              lastName AS last_name, 
+#              gender, 
+#              level
+#         FROM staging_events
+#     )
+#     SELECT DISTINCT user_id, first_name, last_name, gender, level FROM numbered_levels
+#     WHERE row_num = 1 and user_id is not null
+    
 # """)
+
+user_table_insert = ("""
+     INSERT INTO users (user_id,
+     first_name,
+     last_name,
+     gender,
+     level)
+    SELECT  DISTINCT(userId)    AS user_id,
+            firstName           AS first_name,
+            lastName            AS last_name,
+            gender,
+            level
+    FROM staging_events
+
+    WHERE page  =  'NextSong';
+""")
 
 song_table_insert = ("""
     INSERT INTO songs 
@@ -284,15 +285,7 @@ import configparser
 config = configparser.ConfigParser()
 config.read('dwh.cfg')
 
-# DROP TABLES
 
-staging_events_table_drop = "DROP TABLE IF EXISTS stage_event"
-staging_songs_table_drop =  "DROP TABLE IF EXISTS stage_song"
-songplay_table_drop =       "DROP TABLE IF EXISTS songplays"
-user_table_drop =           "DROP TABLE IF EXISTS users"
-song_table_drop =           "DROP TABLE IF EXISTS songs"
-artist_table_drop =         "DROP TABLE IF EXISTS artists"
-time_table_drop =           "DROP TABLE IF EXISTS time"
 
 
 
@@ -429,24 +422,6 @@ SELECT title, songs.year,
 )
 
 
-# """
-# WITH super_users AS (
-#     SELECT  user_id, COUNT(*) AS cnt
-#     FROM songplay
-#     GROUP BY user_id
-#     ORDER BY cnt DESC
-#     LIMIT 15
-# )
-# SELECT users.first_name, 
-#        users.last_name, 
-#        super_users.cnt
-#   FROM super_users
-#  INNER JOIN users
-#        ON users.user_id = super_users.user_id
-       
-#  ORDER BY cnt DESC
-# """
-
 test9 = (
     """
     select * from songs s
@@ -454,23 +429,7 @@ test9 = (
 
     """
 )
-# """
-# WITH super_users AS (
-#     SELECT  user_id, COUNT(*) AS cnt
-#     FROM songplay
-#     GROUP BY user_id
-#     ORDER BY cnt DESC
-#     LIMIT 15
-# )
-# SELECT users.first_name, 
-#        users.last_name, 
-#        super_users.cnt
-#   FROM super_users
-#  INNER JOIN users
-#        ON users.user_id = super_users.user_id
-       
-#  ORDER BY cnt DESC
-# """
+
 
 # QUERY LISTS
 create_table_queries =  [

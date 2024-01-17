@@ -46,36 +46,39 @@ def sample_data_from_tables(cur):
                      "sessionId" ,"song", "status" ,"ts", "userAgent", "userId")
                 ),
                 ("staging_songs", 
-                    ("num_songs", "artist_id", "artist_latitude", "artist_longitude", "artist_location", 
-                     "artist_name", "song_id", "title", "duration", "year")
-                ),
-                ("users", ("user_id", "first_name", "last_name", "gender", "level")
-                ),
-                ("songs", ("song_id", "title", "artist_id", "year", "duration")
-                ),
-                ("artists", ("artist_id", "name", "location", "latitude", "longitude")
-                ),
-                ("time", ("start_time", "hour", "day", "week", "month", "year", "weekday")
+                    ("num_songs", "artist_id", "artist_latitude", "artist_longitude", 
+                     "artist_location", "artist_name", "song_id", "title", "duration",
+                     "year")
                 ),
                 ("songplay",
                     ("songplay_id", "start_time", "user_id", "level", "song_id",
                     "artist_id", "session_id", "location", "user_agent")
+                ),
+                ("users", 
+                    ("user_id", "first_name", "last_name", "gender", "level")
+                ),
+                ("songs", 
+                    ("song_id", "title", "artist_id", "year", "duration")
+                ),
+                ("artists", 
+                    ("artist_id", "name", "location", "latitude", "longitude")
+                ),
+                ("time", 
+                    ("start_time", "hour", "day", "week", "month", "year", "weekday")
                 )
             )
         
     for table, cols in tables:
         query = """
-            SELECT * 
-              FROM {}
-             ORDER BY random()
-             LIMIT {};
+            SELECT * FROM {}
+            ORDER BY random()
+            LIMIT {};
         """.format(table, 20)
 
         logging.info('Sample of data in final tables. {}'.format(query))
         try:
             cur.execute(query)
             rows = cur.fetchall()
-           # logging.info('Sample of data in {}: {}'.format(table, query))
             print(pd.DataFrame(rows, columns=cols))
 
         except Exception as e:
